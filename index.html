@@ -1,21 +1,17 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-  <meta charset="UTF-8">
-  <title>レシートガチャ</title>
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-  <h1>レシートガチャ読取テスト</h1>
-  <p>GitHub Pages 起動確認OK 2</p>
+<h1>レシートガチャ読取テスト</h1>
 
-  <button onclick="startCamera()">
-📷 レシートを読む
+<button id="scanButton">
+レシートを読む
 </button>
 
 <br><br>
 
-<video id="camera" width="320" autoplay playsinline></video>
-  <script src="script.js"></script>
-</body>
-</html>
+<video
+id="camera"
+width="320"
+height="240"
+autoplay
+playsinline>
+</video>
+
+<script src="script.js"></script>
