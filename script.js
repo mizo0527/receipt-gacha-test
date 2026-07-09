@@ -1,4 +1,4 @@
-async function startCamera() {
+document.getElementById("scanButton").addEventListener("click", async () => {
 
     try {
 
@@ -8,14 +8,18 @@ async function startCamera() {
             }
         });
 
-        document.getElementById("camera").srcObject = stream;
+        const video = document.getElementById("camera");
 
-    } catch (err) {
+        video.srcObject = stream;
 
-        alert("カメラが起動できませんでした。");
+        video.play();
 
-        console.error(err);
+    } catch (e) {
+
+        alert("カメラを起動できませんでした");
+
+        console.log(e);
 
     }
 
-}
+});
