@@ -7,19 +7,41 @@
   <script src="https://unpkg.com/html5-qrcode"></script>
 </head>
 <body>
-  <h1>レシートガチャ読取テスト</h1>
+  <main class="app">
+    <h1>レシートガチャ読取テスト</h1>
 
-  <button id="scanButton">
-    レシートを読む
-  </button>
+    <p class="guide">
+      レシート下部のバーコードを<br>
+      枠の中にまっすぐ合わせてください
+    </p>
 
-  <br><br>
+    <button id="scanButton" type="button">
+      📷 レシートを読む
+    </button>
 
-<video
-id="camera"
-autoplay
-playsinline>
-</video>
+    <section class="scanner-wrap">
+      <div id="reader"></div>
+
+      <div id="scanOverlay" class="scan-overlay hidden">
+        <div class="scan-frame">
+          <span class="corner top-left"></span>
+          <span class="corner top-right"></span>
+          <span class="corner bottom-left"></span>
+          <span class="corner bottom-right"></span>
+          <span class="scan-line"></span>
+        </div>
+      </div>
+    </section>
+
+    <p id="statusText" class="status">
+      「レシートを読む」を押してください
+    </p>
+
+    <div id="resultBox" class="result hidden">
+      <div class="result-title">読み取り成功</div>
+      <div id="resultText"></div>
+    </div>
+  </main>
 
   <script src="script.js"></script>
 </body>
