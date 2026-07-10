@@ -2,45 +2,62 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>レシートガチャ</title>
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  >
+
+  <title>レシートガチャ読取テスト</title>
+
   <link rel="stylesheet" href="style.css">
-  <script src="https://unpkg.com/html5-qrcode"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.12.1/dist/quagga.min.js"></script>
 </head>
+
 <body>
-  <main class="app">
-    <h1>レシートガチャ読取テスト</h1>
+  <main id="scannerPage">
 
-    <p class="guide">
-      レシート下部のバーコードを<br>
-      枠の中にまっすぐ合わせてください
-    </p>
+    <div id="cameraArea"></div>
 
-    <button id="scanButton" type="button">
-      📷 レシートを読む
-    </button>
+    <div class="shade shade-top"></div>
+    <div class="shade shade-bottom"></div>
 
-    <section class="scanner-wrap">
-      <div id="reader"></div>
-
-      <div id="scanOverlay" class="scan-overlay hidden">
-        <div class="scan-frame">
-          <span class="corner top-left"></span>
-          <span class="corner top-right"></span>
-          <span class="corner bottom-left"></span>
-          <span class="corner bottom-right"></span>
-          <span class="scan-line"></span>
-        </div>
+    <header class="topBar">
+      <div>
+        <h1>レシートガチャ</h1>
+        <p>レシート下部のバーコードを読み取ります</p>
       </div>
+    </header>
+
+    <section class="scanGuide">
+      <div class="scanFrame">
+        <span class="corner top-left"></span>
+        <span class="corner top-right"></span>
+        <span class="corner bottom-left"></span>
+        <span class="corner bottom-right"></span>
+        <span class="scanLine"></span>
+      </div>
+
+      <p id="statusText">
+        下のボタンを押してカメラを起動してください
+      </p>
     </section>
 
-    <p id="statusText" class="status">
-      「レシートを読む」を押してください
-    </p>
-
-    <div id="resultBox" class="result hidden">
-      <div class="result-title">読み取り成功</div>
+    <section id="resultPanel" class="resultPanel hidden">
+      <div class="successTitle">読み取り成功</div>
       <div id="resultText"></div>
-    </div>
+    </section>
+
+    <footer class="bottomBar">
+      <button id="startButton" type="button">
+        カメラを起動
+      </button>
+
+      <button id="stopButton" type="button" class="secondary hidden">
+        停止
+      </button>
+    </footer>
+
   </main>
 
   <script src="script.js"></script>
