@@ -5,16 +5,14 @@ const resultPanel = document.getElementById("resultPanel");
 const resultText = document.getElementById("resultText");
 
 let scannerRunning = false;
-let acceptedCode = "";
-let acceptedAt = 0;
+let lastCandidate = "";
+let sameCandidateCount = 0;
 
 startButton.addEventListener("click", startScanner);
 stopButton.addEventListener("click", stopScanner);
 
 function startScanner() {
-  if (scannerRunning) {
-    return;
-  }
+  if (scannerRunning) return;
 
   if (typeof Quagga === "undefined") {
     statusText.textContent =
@@ -24,8 +22,9 @@ function startScanner() {
 
   resultPanel.classList.add("hidden");
   resultText.textContent = "";
-  acceptedCode = "";
-  acceptedAt = 0;
+
+  lastCandidate = "";
+  sameCandidateCount = 0;
 
   startButton.disabled = true;
   statusText.textContent = "カメラを起動しています…";
@@ -38,33 +37,37 @@ function startScanner() {
         target: document.querySelector("#cameraArea"),
 
         constraints: {
-          facingMode: "environment",
+          facingMode: {
+            ideal: "environment"
+          },
 
           width: {
-            min: 640,
             ideal: 1920
           },
 
           height: {
-            min: 480,
             ideal: 1080
-          },
-
-          aspectRatio: {
-            ideal: 1.7777778
           }
         },
 
+        /*
+          画面中央の広い範囲を解析。
+          バーコードが縦向き・横向きでも拾いやすくする。
+        */
         area: {
-          top: "34%",
-          right: "5%",
-          left: "5%",
-          bottom: "34%"
+          top: "18%",
+          right: "2%",
+          left: "2%",
+          bottom: "18%"
         }
       },
 
       locator: {
-        patchSize: "medium",
+        /*
+          細い線の長いバーコードを優先。
+          halfSample:falseで解像度を落とさない。
+        */
+        patchSize: "large",
         halfSample: false
       },
 
@@ -73,20 +76,16 @@ function startScanner() {
         Math.min(4, navigator.hardwareConcurrency || 2)
       ),
 
-      frequency: 12,
+      frequency: 15,
 
+      /*
+        今回はレシートのCODE128だけに集中。
+        読取方式を増やしすぎると遅くなり、
+        誤読候補も増える。
+      */
       decoder: {
         readers: [
-          "code_128_reader",
-          "code_39_reader",
-          "code_93_reader",
-          "codabar_reader",
-          "ean_reader",
-          "ean_8_reader",
-          "upc_reader",
-          "upc_e_reader",
-          "i2of5_reader",
-          "2of5_reader"
+          "code_128_reader"
         ],
 
         multiple: false
@@ -97,7 +96,7 @@ function startScanner() {
 
     function onInit(error) {
       if (error) {
-        console.error(error);
+        console.error("Quagga初期化エラー:", error);
 
         statusText.textContent =
           "カメラを起動できませんでした。ページを再読み込みしてください。";
@@ -109,30 +108,30 @@ function startScanner() {
       Quagga.start();
 
       scannerRunning = true;
+
       startButton.classList.add("hidden");
       stopButton.classList.remove("hidden");
 
       statusText.textContent =
-        "バーコードを横向きにして、中央の枠いっぱいへ合わせてください";
+        "バーコード全体と左右の白い余白を、中央の枠へ入れてください";
     }
   );
 }
 
 function stopScanner() {
-  if (!scannerRunning) {
-    return;
-  }
+  if (!scannerRunning) return;
 
   try {
     Quagga.stop();
   } catch (error) {
-    console.warn(error);
+    console.warn("停止時の警告:", error);
   }
 
   scannerRunning = false;
 
   stopButton.classList.add("hidden");
   startButton.classList.remove("hidden");
+
   startButton.disabled = false;
   startButton.textContent = "もう一度読む";
 
@@ -140,57 +139,76 @@ function stopScanner() {
     "停止しました。「もう一度読む」を押してください";
 }
 
+/*
+  バーコード候補を検出したときに呼ばれる。
+*/
 Quagga.onDetected(function onDetected(data) {
   const code = data?.codeResult?.code;
-  const errors = data?.codeResult?.decodedCodes
-    ?.filter(item => typeof item.error === "number")
-    ?.map(item => item.error);
 
-  if (!code || !errors || errors.length === 0) {
-    return;
-  }
+  if (!code) return;
 
-  const averageError =
-    errors.reduce((sum, value) => sum + value, 0) / errors.length;
+  console.log("読取候補:", code);
 
   /*
-    誤読防止：
-    同じコードが短時間に2回検出されたときだけ確定する。
+    同じ文字列が2回続いたら確定。
+    前版の品質判定は一旦外す。
   */
-
-  const now = Date.now();
-
-  if (
-    acceptedCode !== code ||
-    now - acceptedAt > 1600
-  ) {
-    acceptedCode = code;
-    acceptedAt = now;
+  if (code === lastCandidate) {
+    sameCandidateCount += 1;
+  } else {
+    lastCandidate = code;
+    sameCandidateCount = 1;
 
     statusText.textContent =
-      "同じバーコードをもう一度確認しています…";
-
-    return;
+      "候補を検出しました：" + code + "　確認中…";
   }
+
+  if (sameCandidateCount < 2) return;
 
   /*
-    読取品質が極端に悪い候補を除外。
-    数値が小さいほど比較的良好。
+    ライフのレシート想定形式：
+    A + 数字16桁 + A
+
+    ただし検証中は形式が違っても結果を表示する。
   */
+  const isLifeReceipt = /^A\d{16}A$/.test(code);
 
-  if (averageError > 0.35) {
-    statusText.textContent =
-      "ピントを合わせて、もう少しだけ近づけてください";
-
-    return;
-  }
-
-  finishReading(code);
+  finishReading(code, isLifeReceipt);
 });
 
-function finishReading(code) {
-  resultText.textContent = code;
+function finishReading(code, isLifeReceipt) {
+  if (!scannerRunning) return;
+
+  try {
+    Quagga.stop();
+  } catch (error) {
+    console.warn("停止時の警告:", error);
+  }
+
+  scannerRunning = false;
+
   resultPanel.classList.remove("hidden");
+
+  if (isLifeReceipt) {
+    const purchaseDate = code.slice(1, 9);
+    const registerNo = code.slice(9, 13);
+    const receiptNo = code.slice(13, 17);
+
+    resultText.innerHTML =
+      code +
+      "<br><br>" +
+      "購入日：" + purchaseDate +
+      "<br>" +
+      "レジ番号：" + registerNo +
+      "<br>" +
+      "レシートNo：" + receiptNo;
+  } else {
+    resultText.innerHTML =
+      code +
+      "<br><br>" +
+      "※バーコードは読めましたが、" +
+      "想定したレシート形式とは異なります。";
+  }
 
   statusText.textContent = "読み取り成功！";
 
@@ -198,18 +216,11 @@ function finishReading(code) {
     navigator.vibrate(140);
   }
 
-  try {
-    Quagga.stop();
-  } catch (error) {
-    console.warn(error);
-  }
-
-  scannerRunning = false;
-
   stopButton.classList.add("hidden");
   startButton.classList.remove("hidden");
+
   startButton.disabled = false;
   startButton.textContent = "別のレシートを読む";
 
-  console.log("読み取り結果:", code);
+  console.log("確定結果:", code);
 }
