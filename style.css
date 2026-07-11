@@ -168,6 +168,18 @@ button:disabled {
   font-size: 18px;
 }
 
+.fileButton {
+  min-width: 160px;
+  padding: 14px 20px;
+  border-radius: 999px;
+  background: #2368d8;
+  color: #fff;
+  font-size: 17px;
+  font-weight: 800;
+  text-align: center;
+  box-shadow: 0 5px 18px rgba(0, 0, 0, 0.35);
+}
+
 .hidden {
   display: none;
 }
