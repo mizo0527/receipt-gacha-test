@@ -1,1 +1,436 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
 
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  >
+
+  <title>レシートバーコード静止画テスト</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.12.1/dist/quagga.min.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 24px 16px 48px;
+      background: #f3f5f7;
+      color: #222;
+      font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "Helvetica Neue",
+        "Yu Gothic",
+        "Meiryo",
+        sans-serif;
+    }
+
+    main {
+      width: min(100%, 560px);
+      margin: 0 auto;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 24px;
+      text-align: center;
+    }
+
+    .description {
+      margin: 0 0 22px;
+      color: #555;
+      line-height: 1.6;
+      text-align: center;
+    }
+
+    .file-button {
+      display: block;
+      width: 100%;
+      padding: 16px;
+      border-radius: 14px;
+      background: #176dce;
+      color: white;
+      font-size: 18px;
+      font-weight: 800;
+      text-align: center;
+      cursor: pointer;
+    }
+
+    #imageInput {
+      display: none;
+    }
+
+    .preview-box {
+      margin-top: 20px;
+      padding: 12px;
+      border-radius: 14px;
+      background: white;
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
+    }
+
+    #previewImage {
+      display: none;
+      width: 100%;
+      max-height: 420px;
+      object-fit: contain;
+    }
+
+    .status-box,
+    .result-box,
+    .log-box {
+      margin-top: 16px;
+      padding: 16px;
+      border-radius: 14px;
+      background: white;
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
+    }
+
+    .box-title {
+      margin-bottom: 8px;
+      font-weight: 900;
+    }
+
+    #statusText {
+      line-height: 1.6;
+      font-weight: 700;
+    }
+
+    #resultText {
+      font-family:
+        ui-monospace,
+        SFMono-Regular,
+        Menlo,
+        Consolas,
+        monospace;
+      line-height: 1.7;
+      overflow-wrap: anywhere;
+    }
+
+    #logText {
+      max-height: 260px;
+      margin: 0;
+      overflow: auto;
+      white-space: pre-wrap;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .success {
+      border: 3px solid #22a24c;
+    }
+
+    .failure {
+      border: 3px solid #d64b4b;
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+  <main>
+    <h1>静止画バーコード解析テスト</h1>
+
+    <p class="description">
+      レシート写真またはスクリーンショットを選択し、<br>
+      Quagga2が静止画を読めるか確認します。
+    </p>
+
+    <label class="file-button" for="imageInput">
+      写真・スクショを選択
+    </label>
+
+    <input
+      id="imageInput"
+      type="file"
+      accept="image/*"
+    >
+
+    <section class="preview-box">
+      <div class="box-title">選択した画像</div>
+      <div id="previewMessage">まだ画像は選択されていません</div>
+      <img id="previewImage" alt="選択画像">
+    </section>
+
+    <section class="status-box">
+      <div class="box-title">現在の状態</div>
+      <div id="statusText">
+        写真を選択してください
+      </div>
+    </section>
+
+    <section id="resultBox" class="result-box hidden">
+      <div class="box-title">解析結果</div>
+      <div id="resultText"></div>
+    </section>
+
+    <section class="log-box">
+      <div class="box-title">実験ログ</div>
+      <pre id="logText">待機中</pre>
+    </section>
+  </main>
+
+  <script>
+    const imageInput = document.getElementById("imageInput");
+    const previewImage = document.getElementById("previewImage");
+    const previewMessage = document.getElementById("previewMessage");
+    const statusText = document.getElementById("statusText");
+    const resultBox = document.getElementById("resultBox");
+    const resultText = document.getElementById("resultText");
+    const logText = document.getElementById("logText");
+
+    const decodeTests = [
+      {
+        name: "NW-7 / Codabar",
+        readers: ["codabar_reader"]
+      },
+      {
+        name: "CODE128",
+        readers: ["code_128_reader"]
+      },
+      {
+        name: "Codabar＋CODE128",
+        readers: [
+          "codabar_reader",
+          "code_128_reader"
+        ]
+      }
+    ];
+
+    imageInput.addEventListener("change", handleImageSelection);
+
+    function setStatus(message) {
+      statusText.textContent = message;
+      addLog(message);
+    }
+
+    function addLog(message, detail = "") {
+      const time = new Date().toLocaleTimeString("ja-JP");
+
+      const line =
+        "[" + time + "] " +
+        message +
+        (detail ? "\n" + detail : "");
+
+      if (logText.textContent === "待機中") {
+        logText.textContent = line;
+      } else {
+        logText.textContent += "\n\n" + line;
+      }
+
+      logText.scrollTop = logText.scrollHeight;
+      console.log(message, detail);
+    }
+
+    function resetDisplay() {
+      resultBox.classList.add("hidden");
+      resultBox.classList.remove("success", "failure");
+      resultText.textContent = "";
+      logText.textContent = "待機中";
+    }
+
+    function handleImageSelection(event) {
+      const file = event.target.files?.[0];
+
+      if (!file) {
+        return;
+      }
+
+      resetDisplay();
+
+      addLog(
+        "画像を選択しました",
+        "ファイル名: " + file.name +
+        "\n種類: " + (file.type || "不明") +
+        "\n容量: " + Math.round(file.size / 1024) + " KB"
+      );
+
+      setStatus("① 画像を読み込んでいます…");
+
+      const reader = new FileReader();
+
+      reader.onload = function () {
+        const imageDataUrl = reader.result;
+
+        previewImage.src = imageDataUrl;
+        previewImage.style.display = "block";
+        previewMessage.style.display = "none";
+
+        previewImage.onload = function () {
+          addLog(
+            "画像の読み込み完了",
+            "画像サイズ: " +
+            previewImage.naturalWidth +
+            " × " +
+            previewImage.naturalHeight
+          );
+
+          setStatus("② 静止画解析を開始します…");
+          runDecodeTest(imageDataUrl, 0);
+        };
+
+        previewImage.onerror = function () {
+          showFailure(
+            "画像を表示できませんでした。\nJPEGまたはPNGで試してください。"
+          );
+        };
+      };
+
+      reader.onerror = function () {
+        showFailure("画像ファイルの読み込みに失敗しました。");
+      };
+
+      reader.readAsDataURL(file);
+    }
+
+    function runDecodeTest(imageDataUrl, testIndex) {
+      if (testIndex >= decodeTests.length) {
+        showFailure(
+          "全方式で読み取りに失敗しました。\n\n" +
+          "Codabar：失敗\n" +
+          "CODE128：失敗\n" +
+          "両方指定：失敗"
+        );
+
+        return;
+      }
+
+      const currentTest = decodeTests[testIndex];
+
+      setStatus(
+        "③ " +
+        currentTest.name +
+        " で解析中…"
+      );
+
+      addLog(
+        currentTest.name + " の解析を開始",
+        "readers: " + currentTest.readers.join(", ")
+      );
+
+      Quagga.decodeSingle(
+        {
+          src: imageDataUrl,
+
+          numOfWorkers: 0,
+
+          inputStream: {
+            size: 1600
+          },
+
+          locator: {
+            patchSize: "medium",
+            halfSample: false
+          },
+
+          decoder: {
+            readers: currentTest.readers,
+            multiple: false
+          },
+
+          locate: true
+        },
+
+        function (result) {
+          addLog(
+            currentTest.name + " の解析終了",
+            safeStringify(result)
+          );
+
+          const code = result?.codeResult?.code;
+
+          if (code) {
+            showSuccess(
+              code,
+              currentTest.name,
+              result
+            );
+
+            return;
+          }
+
+          setStatus(
+            currentTest.name +
+            " では読めませんでした。次を試します…"
+          );
+
+          setTimeout(function () {
+            runDecodeTest(
+              imageDataUrl,
+              testIndex + 1
+            );
+          }, 400);
+        }
+      );
+    }
+
+    function showSuccess(code, methodName, rawResult) {
+      setStatus("④ 静止画の読み取り完了！");
+
+      resultBox.classList.remove("hidden", "failure");
+      resultBox.classList.add("success");
+
+      const format =
+        rawResult?.codeResult?.format ||
+        methodName;
+
+      resultText.textContent =
+        "使用方式：" + methodName + "\n" +
+        "判定規格：" + format + "\n\n" +
+        "読取文字列：\n" + code;
+
+      addLog(
+        "読み取り成功",
+        "方式: " + methodName +
+        "\n規格: " + format +
+        "\n文字列: " + code
+      );
+
+      if (navigator.vibrate) {
+        navigator.vibrate(150);
+      }
+    }
+
+    function showFailure(message) {
+      setStatus("④ 静止画の読み取りに失敗しました");
+
+      resultBox.classList.remove("hidden", "success");
+      resultBox.classList.add("failure");
+
+      resultText.textContent = message;
+
+      addLog("全テスト失敗", message);
+    }
+
+    function safeStringify(value) {
+      try {
+        return JSON.stringify(
+          value,
+          function (key, item) {
+            if (
+              key === "canvas" ||
+              key === "image" ||
+              key === "ctx"
+            ) {
+              return "[省略]";
+            }
+
+            return item;
+          },
+          2
+        );
+      } catch (error) {
+        return String(value);
+      }
+    }
+  </script>
+</body>
+</html>
