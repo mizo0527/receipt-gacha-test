@@ -8,15 +8,23 @@ let scannerRunning = false;
 let lastCandidate = "";
 let sameCandidateCount = 0;
 
+let barcodeSeen = false;
+let lastBarcodeSeenAt = 0;
+let processingTimer = null;
+
 startButton.addEventListener("click", startScanner);
 stopButton.addEventListener("click", stopScanner);
+
+function setStatus(message) {
+  statusText.textContent = message;
+  console.log("[状態]", message);
+}
 
 function startScanner() {
   if (scannerRunning) return;
 
   if (typeof Quagga === "undefined") {
-    statusText.textContent =
-      "バーコード読取ライブラリを読み込めませんでした。";
+    setStatus("読取ライブラリを読み込めませんでした");
     return;
   }
 
@@ -25,9 +33,11 @@ function startScanner() {
 
   lastCandidate = "";
   sameCandidateCount = 0;
+  barcodeSeen = false;
+  lastBarcodeSeenAt = 0;
 
   startButton.disabled = true;
-  statusText.textContent = "カメラを起動しています…";
+  setStatus("① カメラを起動しています…");
 
   Quagga.init(
     {
@@ -50,10 +60,6 @@ function startScanner() {
           }
         },
 
-        /*
-          画面中央の広い範囲を解析。
-          バーコードが縦向き・横向きでも拾いやすくする。
-        */
         area: {
           top: "18%",
           right: "2%",
@@ -63,10 +69,6 @@ function startScanner() {
       },
 
       locator: {
-        /*
-          細い線の長いバーコードを優先。
-          halfSample:falseで解像度を落とさない。
-        */
         patchSize: "large",
         halfSample: false
       },
@@ -78,16 +80,10 @@ function startScanner() {
 
       frequency: 15,
 
-      /*
-        今回はレシートのCODE128だけに集中。
-        読取方式を増やしすぎると遅くなり、
-        誤読候補も増える。
-      */
       decoder: {
         readers: [
           "code_128_reader"
         ],
-
         multiple: false
       },
 
@@ -98,8 +94,9 @@ function startScanner() {
       if (error) {
         console.error("Quagga初期化エラー:", error);
 
-        statusText.textContent =
-          "カメラを起動できませんでした。ページを再読み込みしてください。";
+        setStatus(
+          "カメラを起動できませんでした。ページを再読み込みしてください"
+        );
 
         startButton.disabled = false;
         return;
@@ -112,65 +109,93 @@ function startScanner() {
       startButton.classList.add("hidden");
       stopButton.classList.remove("hidden");
 
-      statusText.textContent =
-        "バーコード全体と左右の白い余白を、中央の枠へ入れてください";
+      setStatus("② カメラ起動完了。バーコードを探しています…");
     }
   );
 }
 
-function stopScanner() {
-  if (!scannerRunning) return;
+/*
+  毎フレームの解析状況を見る。
+  バーコードらしい領域が見つかった時点で状態を変える。
+*/
+Quagga.onProcessed(function onProcessed(result) {
+  if (!scannerRunning || !result) return;
 
-  try {
-    Quagga.stop();
-  } catch (error) {
-    console.warn("停止時の警告:", error);
+  const hasBoxes =
+    Array.isArray(result.boxes) &&
+    result.boxes.length > 0;
+
+  const hasMainBox =
+    Array.isArray(result.box) &&
+    result.box.length > 0;
+
+  const hasBarcodeShape =
+    hasBoxes || hasMainBox;
+
+  if (hasBarcodeShape) {
+    lastBarcodeSeenAt = Date.now();
+
+    if (!barcodeSeen) {
+      barcodeSeen = true;
+      setStatus("③ バーコードを検知しました！");
+    }
+
+    if (!result.codeResult?.code) {
+      clearTimeout(processingTimer);
+
+      processingTimer = setTimeout(() => {
+        if (scannerRunning && barcodeSeen) {
+          setStatus(
+            "④ バーコード読み取り中…そのまま動かさないでください"
+          );
+        }
+      }, 250);
+    }
+
+    return;
   }
 
-  scannerRunning = false;
+  /*
+    一瞬見失っただけでは表示を戻さない。
+  */
+  if (
+    barcodeSeen &&
+    Date.now() - lastBarcodeSeenAt > 1000
+  ) {
+    barcodeSeen = false;
 
-  stopButton.classList.add("hidden");
-  startButton.classList.remove("hidden");
-
-  startButton.disabled = false;
-  startButton.textContent = "もう一度読む";
-
-  statusText.textContent =
-    "停止しました。「もう一度読む」を押してください";
-}
+    setStatus(
+      "② バーコードを探しています。全体と左右の白い余白を枠内へ"
+    );
+  }
+});
 
 /*
-  バーコード候補を検出したときに呼ばれる。
+  文字列までデコードできた時に呼ばれる。
 */
 Quagga.onDetected(function onDetected(data) {
   const code = data?.codeResult?.code;
 
-  if (!code) return;
+  if (!code || !scannerRunning) return;
 
   console.log("読取候補:", code);
 
-  /*
-    同じ文字列が2回続いたら確定。
-    前版の品質判定は一旦外す。
-  */
+  setStatus("⑤ 番号を検出しました。内容を確認中…");
+
   if (code === lastCandidate) {
     sameCandidateCount += 1;
   } else {
     lastCandidate = code;
     sameCandidateCount = 1;
-
-    statusText.textContent =
-      "候補を検出しました：" + code + "　確認中…";
   }
 
-  if (sameCandidateCount < 2) return;
-
   /*
-    ライフのレシート想定形式：
-    A + 数字16桁 + A
-
-    ただし検証中は形式が違っても結果を表示する。
+    誤読防止のため、同じ結果が2回続いたら確定。
   */
+  if (sameCandidateCount < 2) {
+    return;
+  }
+
   const isLifeReceipt = /^A\d{16}A$/.test(code);
 
   finishReading(code, isLifeReceipt);
@@ -210,7 +235,7 @@ function finishReading(code, isLifeReceipt) {
       "想定したレシート形式とは異なります。";
   }
 
-  statusText.textContent = "読み取り成功！";
+  setStatus("⑥ バーコード読み取り完了！");
 
   if (navigator.vibrate) {
     navigator.vibrate(140);
@@ -223,4 +248,26 @@ function finishReading(code, isLifeReceipt) {
   startButton.textContent = "別のレシートを読む";
 
   console.log("確定結果:", code);
+}
+
+function stopScanner() {
+  if (!scannerRunning) return;
+
+  try {
+    Quagga.stop();
+  } catch (error) {
+    console.warn("停止時の警告:", error);
+  }
+
+  scannerRunning = false;
+
+  clearTimeout(processingTimer);
+
+  stopButton.classList.add("hidden");
+  startButton.classList.remove("hidden");
+
+  startButton.disabled = false;
+  startButton.textContent = "もう一度読む";
+
+  setStatus("停止しました");
 }
