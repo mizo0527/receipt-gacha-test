@@ -2,12 +2,13 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
+
   <meta
     name="viewport"
     content="width=device-width, initial-scale=1, viewport-fit=cover"
   >
 
-  <title>レシートガチャ読取テスト</title>
+  <title>レシートバーコード読取</title>
 
   <link rel="stylesheet" href="style.css">
 
@@ -17,57 +18,73 @@
 <body>
   <main id="scannerPage">
 
-    <div id="cameraArea"></div>
+    <video
+      id="cameraVideo"
+      autoplay
+      muted
+      playsinline
+    ></video>
 
-    <div class="shade shade-top"></div>
-    <div class="shade shade-bottom"></div>
+    <canvas id="captureCanvas"></canvas>
+
+    <div class="shade shadeTop"></div>
+    <div class="shade shadeBottom"></div>
 
     <header class="topBar">
-      <div>
-        <h1>レシートガチャ</h1>
-        <p>レシート下部のバーコードを読み取ります</p>
-      </div>
+      <h1>レシートガチャ</h1>
+      <p>レシート下部のバーコードを読み取ります</p>
     </header>
 
-    <section class="scanGuide">
-      <div class="scanFrame">
-        <span class="corner top-left"></span>
-        <span class="corner top-right"></span>
-        <span class="corner bottom-left"></span>
-        <span class="corner bottom-right"></span>
+    <section class="scannerGuide">
+
+      <div id="scanFrame" class="scanFrame">
+        <span class="corner topLeft"></span>
+        <span class="corner topRight"></span>
+        <span class="corner bottomLeft"></span>
+        <span class="corner bottomRight"></span>
         <span class="scanLine"></span>
       </div>
 
-      <p id="statusText">
-        下のボタンを押してカメラを起動してください
-      </p>
+      <div id="statusText" class="statusText">
+        「カメラを起動」を押してください
+      </div>
+
+      <div id="debugText" class="debugText">
+        待機中
+      </div>
+
     </section>
 
     <section id="resultPanel" class="resultPanel hidden">
-      <div class="successTitle">読み取り成功</div>
+      <div class="successTitle">
+        バーコード読み取り完了！
+      </div>
+
       <div id="resultText"></div>
     </section>
 
-  <footer class="bottomBar">
-  <button id="startButton" type="button">
-    カメラを起動
-  </button>
+    <footer class="bottomBar">
 
-  <button id="stopButton" type="button" class="secondary hidden">
-    停止
-  </button>
+      <button id="startButton" type="button">
+        カメラを起動
+      </button>
 
-  <label for="imageInput" class="fileButton">
-    写真から試す
-  </label>
+      <button
+        id="stopButton"
+        type="button"
+        class="secondary hidden"
+      >
+        停止
+      </button>
 
-  <input
-    id="imageInput"
-    type="file"
-    accept="image/*"
-    class="hidden"
-  >
-</footer>
+      <a
+        class="photoButton"
+        href="decode-test.html"
+      >
+        写真から読む
+      </a>
+
+    </footer>
 
   </main>
 
