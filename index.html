@@ -48,15 +48,26 @@
       <div id="resultText"></div>
     </section>
 
-    <footer class="bottomBar">
-      <button id="startButton" type="button">
-        カメラを起動
-      </button>
+  <footer class="bottomBar">
+  <button id="startButton" type="button">
+    カメラを起動
+  </button>
 
-      <button id="stopButton" type="button" class="secondary hidden">
-        停止
-      </button>
-    </footer>
+  <button id="stopButton" type="button" class="secondary hidden">
+    停止
+  </button>
+
+  <label for="imageInput" class="fileButton">
+    写真から試す
+  </label>
+
+  <input
+    id="imageInput"
+    type="file"
+    accept="image/*"
+    class="hidden"
+  >
+</footer>
 
   </main>
 
