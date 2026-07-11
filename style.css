@@ -2,184 +2,327 @@
   box-sizing: border-box;
 }
 
+html,
 body {
+  width: 100%;
+  height: 100%;
   margin: 0;
-  background: #f5f5f5;
-  color: #222;
-  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue",
-    "Yu Gothic", "Meiryo", sans-serif;
+  overflow: hidden;
+  background: #000;
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "Helvetica Neue",
+    "Yu Gothic",
+    "Meiryo",
+    sans-serif;
 }
 
-.app {
-  width: min(100%, 520px);
-  margin: 0 auto;
-  padding: 28px 16px 48px;
+button,
+a {
+  font: inherit;
+}
+
+#scannerPage {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  overflow: hidden;
+  background: #000;
+  color: #fff;
+}
+
+/* カメラ映像 */
+
+#cameraVideo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #000;
+}
+
+#captureCanvas {
+  display: none;
+}
+
+/* 上下の暗幕 */
+
+.shade {
+  position: absolute;
+  left: 0;
+  z-index: 2;
+  width: 100%;
+  pointer-events: none;
+}
+
+.shadeTop {
+  top: 0;
+  height: 25%;
+  background:
+    linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.8),
+      rgba(0, 0, 0, 0)
+    );
+}
+
+.shadeBottom {
+  bottom: 0;
+  height: 33%;
+  background:
+    linear-gradient(
+      to top,
+      rgba(0, 0, 0, 0.88),
+      rgba(0, 0, 0, 0)
+    );
+}
+
+/* タイトル */
+
+.topBar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 5;
+  width: 100%;
+  padding:
+    max(22px, env(safe-area-inset-top))
+    18px
+    12px;
+  text-align: center;
+  pointer-events: none;
+}
+
+.topBar h1 {
+  margin: 0;
+  font-size: 25px;
+  text-shadow: 0 2px 8px #000;
+}
+
+.topBar p {
+  margin: 6px 0 0;
+  font-size: 14px;
+  text-shadow: 0 2px 8px #000;
+}
+
+/* 読取ガイド */
+
+.scannerGuide {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.scanFrame {
+  position: relative;
+  width: min(92vw, 560px);
+  height: 165px;
+  transition:
+    filter 0.2s,
+    transform 0.2s;
+}
+
+.scanFrame.detecting {
+  filter:
+    drop-shadow(0 0 8px #ffd900)
+    drop-shadow(0 0 18px #ffd900);
+}
+
+.scanFrame.success {
+  filter:
+    drop-shadow(0 0 8px #4cff7c)
+    drop-shadow(0 0 22px #4cff7c);
+  transform: scale(1.02);
+}
+
+.corner {
+  position: absolute;
+  width: 46px;
+  height: 46px;
+  border-color: #fff;
+  border-style: solid;
+  filter: drop-shadow(0 2px 3px #000);
+}
+
+.topLeft {
+  top: 0;
+  left: 0;
+  border-width: 5px 0 0 5px;
+  border-radius: 16px 0 0 0;
+}
+
+.topRight {
+  top: 0;
+  right: 0;
+  border-width: 5px 5px 0 0;
+  border-radius: 0 16px 0 0;
+}
+
+.bottomLeft {
+  bottom: 0;
+  left: 0;
+  border-width: 0 0 5px 5px;
+  border-radius: 0 0 0 16px;
+}
+
+.bottomRight {
+  right: 0;
+  bottom: 0;
+  border-width: 0 5px 5px 0;
+  border-radius: 0 0 16px 0;
+}
+
+.scanLine {
+  position: absolute;
+  top: 50%;
+  left: 4%;
+  width: 92%;
+  height: 3px;
+  border-radius: 999px;
+  background: #52ff85;
+  box-shadow:
+    0 0 8px #52ff85,
+    0 0 18px #52ff85;
+  animation: scanMove 1.7s ease-in-out infinite;
+}
+
+@keyframes scanMove {
+  0% {
+    transform: translateY(-60px);
+  }
+
+  50% {
+    transform: translateY(60px);
+  }
+
+  100% {
+    transform: translateY(-60px);
+  }
+}
+
+/* ステータス */
+
+.statusText {
+  width: min(92vw, 560px);
+  min-height: 48px;
+  margin-top: 20px;
+  padding: 11px 14px;
+  border-radius: 13px;
+  background: rgba(0, 0, 0, 0.66);
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.5;
+  text-align: center;
+  text-shadow: 0 1px 4px #000;
+}
+
+.debugText {
+  width: min(92vw, 560px);
+  min-height: 24px;
+  margin-top: 7px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.5);
+  color: #ddd;
+  font-size: 12px;
   text-align: center;
 }
 
-h1 {
-  margin: 0 0 12px;
-  font-size: 25px;
+/* 結果 */
+
+.resultPanel {
+  position: absolute;
+  left: 50%;
+  bottom: max(
+    115px,
+    calc(env(safe-area-inset-bottom) + 95px)
+  );
+  z-index: 8;
+  width: min(92vw, 560px);
+  transform: translateX(-50%);
+  padding: 18px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.97);
+  color: #111;
+  text-align: center;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.38);
 }
 
-.guide {
-  margin: 0 0 18px;
-  color: #555;
-  font-size: 16px;
-  line-height: 1.6;
+.successTitle {
+  margin-bottom: 10px;
+  color: #15923d;
+  font-size: 19px;
+  font-weight: 900;
 }
 
-button {
-  min-width: 220px;
-  padding: 14px 24px;
-  border: 0;
-  border-radius: 12px;
-  background: #168b3f;
-  color: white;
-  font-size: 18px;
+#resultText {
+  font-family:
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Consolas,
+    monospace;
+  font-size: 17px;
   font-weight: 700;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+/* 下部操作 */
+
+.bottomBar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  z-index: 9;
+  display: flex;
+  width: 100%;
+  justify-content: center;
+  gap: 9px;
+  padding:
+    14px
+    12px
+    max(22px, env(safe-area-inset-bottom));
+}
+
+.bottomBar button,
+.bottomBar a {
+  min-width: 105px;
+  padding: 13px 15px;
+  border: 0;
+  border-radius: 999px;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 800;
+  text-align: center;
+  text-decoration: none;
+  box-shadow: 0 5px 18px rgba(0, 0, 0, 0.38);
+}
+
+#startButton {
+  background: #18a947;
+}
+
+.secondary {
+  background: rgba(40, 40, 40, 0.88);
+}
+
+.photoButton {
+  background: #176dce;
 }
 
 button:disabled {
   opacity: 0.55;
 }
 
-.scanner-wrap {
-  position: relative;
-  width: 100%;
-  margin: 22px auto 14px;
-  overflow: hidden;
-  border-radius: 16px;
-  background: #111;
-}
-
-#reader {
-  width: 100%;
-  min-height: 280px;
-  background: #111;
-}
-
-#reader video {
-  width: 100% !important;
-  height: auto !important;
-  object-fit: cover;
-}
-
-.scan-overlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-  background: rgba(0, 0, 0, 0.14);
-}
-
-.scan-frame {
-  position: relative;
-  width: 88%;
-  height: 120px;
-}
-
-.corner {
-  position: absolute;
-  width: 34px;
-  height: 34px;
-  border-color: white;
-  border-style: solid;
-}
-
-.top-left {
-  top: 0;
-  left: 0;
-  border-width: 4px 0 0 4px;
-  border-radius: 12px 0 0 0;
-}
-
-.top-right {
-  top: 0;
-  right: 0;
-  border-width: 4px 4px 0 0;
-  border-radius: 0 12px 0 0;
-}
-
-.bottom-left {
-  bottom: 0;
-  left: 0;
-  border-width: 0 0 4px 4px;
-  border-radius: 0 0 0 12px;
-}
-
-.bottom-right {
-  right: 0;
-  bottom: 0;
-  border-width: 0 4px 4px 0;
-  border-radius: 0 0 12px 0;
-}
-
-.scan-line {
-  position: absolute;
-  top: 50%;
-  left: 5%;
-  width: 90%;
-  height: 2px;
-  background: #38e56b;
-  box-shadow: 0 0 8px #38e56b;
-  animation: scan 1.8s ease-in-out infinite;
-}
-
-@keyframes scan {
-  0% {
-    transform: translateY(-42px);
-  }
-
-  50% {
-    transform: translateY(42px);
-  }
-
-  100% {
-    transform: translateY(-42px);
-  }
-}
-
-.status {
-  min-height: 24px;
-  margin: 10px 0;
-  font-weight: 700;
-}
-
-.result {
-  margin-top: 16px;
-  padding: 18px;
-  border-radius: 14px;
-  background: white;
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
-  word-break: break-all;
-}
-
-.result-title {
-  margin-bottom: 8px;
-  color: #168b3f;
-  font-weight: 800;
-}
-
-#resultText {
-  font-family: monospace;
-  font-size: 18px;
-}
-
-.fileButton {
-  min-width: 160px;
-  padding: 14px 20px;
-  border-radius: 999px;
-  background: #2368d8;
-  color: #fff;
-  font-size: 17px;
-  font-weight: 800;
-  text-align: center;
-  box-shadow: 0 5px 18px rgba(0, 0, 0, 0.35);
-}
-
 .hidden {
-  display: none;
+  display: none !important;
 }
