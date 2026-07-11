@@ -80,10 +80,9 @@ function startScanner() {
 
       frequency: 15,
 
-     decoder: {
+    decoder: {
   readers: [
-    "codabar_reader",
-    "code_128_reader"
+    "codabar_reader"
   ],
   multiple: false
 },
