@@ -33,15 +33,13 @@ a {
   min-height: 100dvh;
 }
 
-/* ─────────────────────────
-   上部：カメラ
-───────────────────────── */
+/* カメラ領域 */
 
 .cameraStage {
   position: relative;
   width: 100%;
-  height: 54dvh;
-  min-height: 360px;
+  height: 48dvh;
+  min-height: 330px;
   overflow: hidden;
   background: #000;
 }
@@ -64,9 +62,9 @@ a {
     linear-gradient(
       to bottom,
       rgba(0, 0, 0, 0.72),
-      rgba(0, 0, 0, 0.06) 30%,
-      rgba(0, 0, 0, 0.02) 70%,
-      rgba(0, 0, 0, 0.68)
+      rgba(0, 0, 0, 0.04) 32%,
+      rgba(0, 0, 0, 0.03) 70%,
+      rgba(0, 0, 0, 0.7)
     );
 }
 
@@ -86,7 +84,7 @@ a {
 
 .topBar h1 {
   margin: 0;
-  font-size: 22px;
+  font-size: 21px;
   text-shadow: 0 2px 8px #000;
 }
 
@@ -96,15 +94,15 @@ a {
   text-shadow: 0 2px 8px #000;
 }
 
-/* 読取枠 */
+/* 細いバーコード枠 */
 
 .scanFrame {
   position: absolute;
-  top: 51%;
+  top: 53%;
   left: 50%;
   z-index: 5;
   width: min(92vw, 620px);
-  height: 150px;
+  height: 105px;
   transform: translate(-50%, -50%);
   pointer-events: none;
   transition:
@@ -127,8 +125,8 @@ a {
 
 .corner {
   position: absolute;
-  width: 44px;
-  height: 44px;
+  width: 38px;
+  height: 38px;
   border-color: #fff;
   border-style: solid;
   filter: drop-shadow(0 2px 4px #000);
@@ -138,28 +136,28 @@ a {
   top: 0;
   left: 0;
   border-width: 5px 0 0 5px;
-  border-radius: 15px 0 0 0;
+  border-radius: 14px 0 0 0;
 }
 
 .topRight {
   top: 0;
   right: 0;
   border-width: 5px 5px 0 0;
-  border-radius: 0 15px 0 0;
+  border-radius: 0 14px 0 0;
 }
 
 .bottomLeft {
   bottom: 0;
   left: 0;
   border-width: 0 0 5px 5px;
-  border-radius: 0 0 0 15px;
+  border-radius: 0 0 0 14px;
 }
 
 .bottomRight {
   right: 0;
   bottom: 0;
   border-width: 0 5px 5px 0;
-  border-radius: 0 0 15px 0;
+  border-radius: 0 0 14px 0;
 }
 
 .scanLine {
@@ -173,41 +171,39 @@ a {
   box-shadow:
     0 0 8px #52ff85,
     0 0 18px #52ff85;
-  animation: scanMove 1.7s ease-in-out infinite;
+  animation: scanMove 1.5s ease-in-out infinite;
 }
 
 @keyframes scanMove {
   0% {
-    transform: translateY(-52px);
+    transform: translateY(-32px);
   }
 
   50% {
-    transform: translateY(52px);
+    transform: translateY(32px);
   }
 
   100% {
-    transform: translateY(-52px);
+    transform: translateY(-32px);
   }
 }
 
 .cameraStatus {
   position: absolute;
-  bottom: 12px;
+  bottom: 11px;
   left: 50%;
   z-index: 6;
   width: min(92vw, 620px);
   transform: translateX(-50%);
   padding: 9px 12px;
   border-radius: 11px;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.72);
   font-size: 14px;
   font-weight: 800;
   text-align: center;
 }
 
-/* ─────────────────────────
-   下部：診断画面
-───────────────────────── */
+/* 診断画面 */
 
 .diagnosticPanel {
   width: 100%;
@@ -236,9 +232,12 @@ a {
   font-weight: 800;
 }
 
+.previewTitle {
+  margin-top: 14px;
+}
+
 .mainStatus {
   min-height: 26px;
-  color: #fff;
   font-size: 16px;
   font-weight: 900;
   line-height: 1.5;
@@ -274,17 +273,21 @@ a {
   overflow-wrap: anywhere;
 }
 
-#previewCanvas {
+/* 3種類の切り出し画像 */
+
+#rawPreview,
+#grayPreview,
+#binaryPreview {
   display: block;
   width: 100%;
-  min-height: 90px;
+  min-height: 70px;
+  border: 1px solid #40464c;
   border-radius: 8px;
   background: #050505;
-  object-fit: contain;
 }
 
 .cropInfo {
-  margin-top: 7px;
+  margin-top: 10px;
   color: #b8c0c7;
   font-size: 11px;
   line-height: 1.5;
@@ -349,13 +352,12 @@ a {
 /* 非表示の処理用Canvas */
 
 #captureCanvas,
-#processCanvas {
+#grayCanvas,
+#binaryCanvas {
   display: none;
 }
 
-/* ─────────────────────────
-   下部操作
-───────────────────────── */
+/* 下部ボタン */
 
 .bottomBar {
   position: fixed;
