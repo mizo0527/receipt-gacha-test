@@ -18,7 +18,6 @@
 <body>
   <main id="scannerPage">
 
-    <!-- 上：カメラ領域 -->
     <section id="cameraStage" class="cameraStage">
 
       <video
@@ -32,7 +31,7 @@
 
       <header class="topBar">
         <h1>レシートバーコード診断</h1>
-        <p>バーコード全体と左右の白い余白を枠内へ</p>
+        <p>バーコードだけを細い枠の中へ合わせてください</p>
       </header>
 
       <div id="scanFrame" class="scanFrame">
@@ -49,7 +48,6 @@
 
     </section>
 
-    <!-- 下：診断領域 -->
     <section class="diagnosticPanel">
 
       <div class="statusCard">
@@ -83,31 +81,45 @@
         </div>
 
         <div class="statItem">
-          <span class="statLabel">候補検出</span>
+          <span class="statLabel">文字列候補</span>
           <strong id="candidateCount">0</strong>
         </div>
 
         <div class="statItem">
-          <span class="statLabel">解析失敗</span>
+          <span class="statLabel">全方式失敗</span>
           <strong id="failureCount">0</strong>
         </div>
 
       </div>
 
       <div class="previewCard">
+
         <div class="sectionTitle">
-          Quaggaへ渡している切り出し画像
+          ① 生画像
         </div>
 
-        <canvas id="previewCanvas"></canvas>
+        <canvas id="rawPreview"></canvas>
+
+        <div class="sectionTitle previewTitle">
+          ② グレースケール＋コントラスト
+        </div>
+
+        <canvas id="grayPreview"></canvas>
+
+        <div class="sectionTitle previewTitle">
+          ③ 二値化
+        </div>
+
+        <canvas id="binaryPreview"></canvas>
 
         <div id="cropInfo" class="cropInfo">
           まだ画像を取得していません
         </div>
+
       </div>
 
       <div class="candidateCard">
-        <div class="sectionTitle">直近の候補</div>
+        <div class="sectionTitle">直近の読取候補</div>
 
         <div id="candidateText" class="candidateText">
           未検出
@@ -129,9 +141,9 @@
 
     </section>
 
-    <!-- 解析用・非表示 -->
     <canvas id="captureCanvas"></canvas>
-    <canvas id="processCanvas"></canvas>
+    <canvas id="grayCanvas"></canvas>
+    <canvas id="binaryCanvas"></canvas>
 
     <footer class="bottomBar">
 
