@@ -1,13 +1,30 @@
+const cameraStage =
+  document.getElementById("cameraStage");
+
 const cameraVideo =
   document.getElementById("cameraVideo");
 
 const captureCanvas =
   document.getElementById("captureCanvas");
 
+const processCanvas =
+  document.getElementById("processCanvas");
+
+const previewCanvas =
+  document.getElementById("previewCanvas");
+
 const captureContext =
   captureCanvas.getContext("2d", {
     willReadFrequently: true
   });
+
+const processContext =
+  processCanvas.getContext("2d", {
+    willReadFrequently: true
+  });
+
+const previewContext =
+  previewCanvas.getContext("2d");
 
 const startButton =
   document.getElementById("startButton");
@@ -18,8 +35,35 @@ const stopButton =
 const statusText =
   document.getElementById("statusText");
 
-const debugText =
-  document.getElementById("debugText");
+const cameraStatus =
+  document.getElementById("cameraStatus");
+
+const cameraState =
+  document.getElementById("cameraState");
+
+const resolutionText =
+  document.getElementById("resolutionText");
+
+const captureCountText =
+  document.getElementById("captureCount");
+
+const decodeCountText =
+  document.getElementById("decodeCount");
+
+const candidateCountText =
+  document.getElementById("candidateCount");
+
+const failureCountText =
+  document.getElementById("failureCount");
+
+const cropInfo =
+  document.getElementById("cropInfo");
+
+const candidateText =
+  document.getElementById("candidateText");
+
+const logText =
+  document.getElementById("logText");
 
 const scanFrame =
   document.getElementById("scanFrame");
@@ -35,12 +79,18 @@ let captureTimer = null;
 
 let cameraRunning = false;
 let decoding = false;
-let frameNumber = 0;
+
+let captureCount = 0;
+let decodeCount = 0;
+let candidateCount = 0;
+let failureCount = 0;
 
 let lastCandidate = "";
 let sameCandidateCount = 0;
 
-const CAPTURE_INTERVAL_MS = 850;
+let logLines = [];
+
+const CAPTURE_INTERVAL_MS = 950;
 
 startButton.addEventListener(
   "click",
@@ -59,12 +109,66 @@ window.addEventListener(
 
 function setStatus(message) {
   statusText.textContent = message;
-  console.log("[状態]", message);
+  cameraStatus.textContent = message;
+  addLog(message);
 }
 
-function setDebug(message) {
-  debugText.textContent = message;
+function setCameraState(message) {
+  cameraState.textContent = message;
+}
+
+function addLog(message) {
+  const time =
+    new Date().toLocaleTimeString("ja-JP");
+
+  logLines.push(
+    "[" + time + "] " + message
+  );
+
+  if (logLines.length > 30) {
+    logLines.shift();
+  }
+
+  logText.textContent =
+    logLines.join("\n");
+
+  logText.scrollTop =
+    logText.scrollHeight;
+
   console.log("[診断]", message);
+}
+
+function updateStats() {
+  captureCountText.textContent =
+    String(captureCount);
+
+  decodeCountText.textContent =
+    String(decodeCount);
+
+  candidateCountText.textContent =
+    String(candidateCount);
+
+  failureCountText.textContent =
+    String(failureCount);
+}
+
+function resetStats() {
+  captureCount = 0;
+  decodeCount = 0;
+  candidateCount = 0;
+  failureCount = 0;
+
+  lastCandidate = "";
+  sameCandidateCount = 0;
+
+  candidateText.textContent =
+    "未検出";
+
+  logLines = [];
+  logText.textContent =
+    "待機中";
+
+  updateStats();
 }
 
 async function startCamera() {
@@ -85,7 +189,7 @@ async function startCamera() {
 
   if (typeof Quagga === "undefined") {
     setStatus(
-      "バーコード読取ライブラリを読み込めませんでした"
+      "Quagga2を読み込めませんでした"
     );
 
     return;
@@ -95,8 +199,8 @@ async function startCamera() {
 
   startButton.disabled = true;
 
+  setCameraState("起動中");
   setStatus("① カメラを起動しています…");
-  setDebug("カメラ許可を確認中");
 
   try {
     mediaStream =
@@ -109,63 +213,79 @@ async function startCamera() {
           },
 
           width: {
-            ideal: 3840
+            ideal: 1920
           },
 
           height: {
-            ideal: 2160
+            ideal: 1080
           }
         }
       });
 
-    cameraVideo.srcObject = mediaStream;
+    cameraVideo.srcObject =
+      mediaStream;
 
     await waitForVideoReady();
-
     await cameraVideo.play();
 
     cameraRunning = true;
 
-    startButton.classList.add("hidden");
-    stopButton.classList.remove("hidden");
+    startButton.classList.add(
+      "hidden"
+    );
 
-    const videoTrack =
+    stopButton.classList.remove(
+      "hidden"
+    );
+
+    const track =
       mediaStream.getVideoTracks()[0];
 
     const settings =
-      videoTrack.getSettings();
+      track.getSettings();
+
+    const width =
+      settings.width ||
+      cameraVideo.videoWidth;
+
+    const height =
+      settings.height ||
+      cameraVideo.videoHeight;
+
+    resolutionText.textContent =
+      width + "×" + height;
+
+    setCameraState("起動中");
 
     setStatus(
       "② カメラ起動完了。バーコードを枠へ合わせてください"
     );
 
-    setDebug(
-      "映像: " +
+    addLog(
+      "実映像：" +
       cameraVideo.videoWidth +
       "×" +
-      cameraVideo.videoHeight +
-      " / 実設定: " +
-      (settings.width || "?") +
-      "×" +
-      (settings.height || "?")
+      cameraVideo.videoHeight
     );
 
     /*
-      オートフォーカスが落ち着くまで少し待つ。
+      オートフォーカスを待つ。
     */
     setTimeout(
       startCaptureLoop,
-      900
+      1200
     );
 
   } catch (error) {
     console.error(error);
 
+    setCameraState("エラー");
+
     setStatus(
       "カメラを起動できませんでした"
     );
 
-    setDebug(
+    addLog(
       error.name + ": " + error.message
     );
 
@@ -174,34 +294,37 @@ async function startCamera() {
 }
 
 function waitForVideoReady() {
-  return new Promise((resolve, reject) => {
-    if (
-      cameraVideo.readyState >= 2 &&
-      cameraVideo.videoWidth > 0
-    ) {
-      resolve();
-      return;
-    }
-
-    const timeout = setTimeout(() => {
-      reject(
-        new Error(
-          "カメラ映像の準備が完了しませんでした"
-        )
-      );
-    }, 8000);
-
-    cameraVideo.addEventListener(
-      "loadedmetadata",
-      function handleMetadata() {
-        clearTimeout(timeout);
+  return new Promise(
+    (resolve, reject) => {
+      if (
+        cameraVideo.readyState >= 2 &&
+        cameraVideo.videoWidth > 0
+      ) {
         resolve();
-      },
-      {
-        once: true
+        return;
       }
-    );
-  });
+
+      const timeout =
+        setTimeout(() => {
+          reject(
+            new Error(
+              "カメラ映像の準備が完了しませんでした"
+            )
+          );
+        }, 8000);
+
+      cameraVideo.addEventListener(
+        "loadedmetadata",
+        function handleMetadata() {
+          clearTimeout(timeout);
+          resolve();
+        },
+        {
+          once: true
+        }
+      );
+    }
+  );
 }
 
 function startCaptureLoop() {
@@ -212,17 +335,15 @@ function startCaptureLoop() {
   clearInterval(captureTimer);
 
   setStatus(
-    "③ バーコードを探しています…"
+    "③ バーコード探索中…"
   );
 
-  captureTimer = setInterval(
-    captureAndDecodeFrame,
-    CAPTURE_INTERVAL_MS
-  );
+  captureTimer =
+    setInterval(
+      captureAndDecodeFrame,
+      CAPTURE_INTERVAL_MS
+    );
 
-  /*
-    最初の1回は待たずに実行。
-  */
   captureAndDecodeFrame();
 }
 
@@ -236,84 +357,150 @@ async function captureAndDecodeFrame() {
   }
 
   decoding = true;
-  frameNumber += 1;
 
   try {
-    const frameDataUrl =
+    const crop =
       createBarcodeCrop();
 
-    if (!frameDataUrl) {
-      setDebug(
-        "フレーム " +
-        frameNumber +
-        "：画像取得失敗"
+    if (!crop) {
+      failureCount += 1;
+      updateStats();
+
+      addLog(
+        "切り出し画像の取得に失敗"
       );
 
       return;
     }
 
-    setStatus(
-      "④ バーコード検知・解析中…そのまま動かさないでください"
-    );
+    captureCount += 1;
+    updateStats();
+
+    showPreview();
+
+    cropInfo.textContent =
+      "元映像：" +
+      cameraVideo.videoWidth +
+      "×" +
+      cameraVideo.videoHeight +
+      "／切出：" +
+      crop.width +
+      "×" +
+      crop.height +
+      "／位置：" +
+      crop.x +
+      "," +
+      crop.y;
 
     scanFrame.classList.add(
       "detecting"
     );
 
-    setDebug(
-      "フレーム " +
-      frameNumber +
-      " を静止画解析中"
+    setStatus(
+      "④ 静止画を解析中…"
     );
 
-    const code =
-      await decodeCapturedImage(
-        frameDataUrl
-      );
+    /*
+      3種類の画像を順番に試す。
+      1. 生画像
+      2. グレースケール＋コントラスト
+      3. 二値化
+    */
+    const variants =
+      createImageVariants();
 
-    if (!code) {
+    let detectedCode = null;
+    let detectedMethod = "";
+
+    for (
+      const variant of variants
+    ) {
+      decodeCount += 1;
+      updateStats();
+
+      const code =
+        await decodeImage(
+          variant.dataUrl
+        );
+
+      if (code) {
+        detectedCode = code;
+        detectedMethod =
+          variant.name;
+
+        break;
+      }
+    }
+
+    if (!detectedCode) {
+      failureCount += 1;
+      updateStats();
+
       setStatus(
-        "③ バーコードを探しています…枠内へ大きく映してください"
+        "③ 探索中…バーコードを大きく、まっすぐ映してください"
       );
 
-      setDebug(
-        "フレーム " +
-        frameNumber +
-        "：デコード結果なし"
+      addLog(
+        "取得" +
+        captureCount +
+        "：3方式すべて結果なし"
       );
 
       return;
     }
 
+    candidateCount += 1;
+    updateStats();
+
+    candidateText.textContent =
+      detectedCode +
+      "（" +
+      detectedMethod +
+      "）";
+
     setStatus(
-      "⑤ 番号を検出しました。再確認中…"
+      "⑤ 番号を検出。再確認中…"
     );
 
-    setDebug(
-      "候補：" + code
+    addLog(
+      "候補：" +
+      detectedCode +
+      "／方式：" +
+      detectedMethod
     );
 
-    /*
-      同じ結果を2回検出したら確定。
-    */
-    if (code === lastCandidate) {
+    if (
+      detectedCode === lastCandidate
+    ) {
       sameCandidateCount += 1;
     } else {
-      lastCandidate = code;
+      lastCandidate =
+        detectedCode;
+
       sameCandidateCount = 1;
     }
 
-    if (sameCandidateCount >= 2) {
-      finishReading(code);
+    if (
+      sameCandidateCount >= 2
+    ) {
+      finishReading(
+        detectedCode,
+        detectedMethod
+      );
     }
 
   } catch (error) {
     console.error(error);
 
-    setDebug(
-      "フレーム " +
-      frameNumber +
-      "：解析エラー"
+    failureCount += 1;
+    updateStats();
+
+    setStatus(
+      "解析処理でエラーが発生しました"
+    );
+
+    addLog(
+      error.name + ": " + error.message
     );
 
   } finally {
@@ -324,14 +511,15 @@ async function captureAndDecodeFrame() {
         scanFrame.classList.remove(
           "detecting"
         );
-      }, 250);
+      }, 220);
     }
   }
 }
 
 /*
-  カメラ映像の中央にある
-  横長領域だけを高解像度で切り出す。
+  表示中の読取枠と一致するように、
+  object-fit: cover の倍率を逆算して
+  元動画から切り出す。
 */
 function createBarcodeCrop() {
   const videoWidth =
@@ -347,36 +535,103 @@ function createBarcodeCrop() {
     return null;
   }
 
+  const videoRect =
+    cameraVideo.getBoundingClientRect();
+
+  const frameRect =
+    scanFrame.getBoundingClientRect();
+
+  const displayWidth =
+    videoRect.width;
+
+  const displayHeight =
+    videoRect.height;
+
   /*
-    元映像の横92％・縦30％を使用。
+    object-fit: cover の表示倍率。
   */
-  const cropWidth =
-    Math.floor(videoWidth * 0.92);
-
-  const cropHeight =
-    Math.floor(videoHeight * 0.3);
-
-  const sourceX =
-    Math.floor(
-      (videoWidth - cropWidth) / 2
+  const scale =
+    Math.max(
+      displayWidth / videoWidth,
+      displayHeight / videoHeight
     );
 
-  const sourceY =
-    Math.floor(
-      (videoHeight - cropHeight) / 2
+  const renderedWidth =
+    videoWidth * scale;
+
+  const renderedHeight =
+    videoHeight * scale;
+
+  const hiddenX =
+    (renderedWidth - displayWidth) / 2;
+
+  const hiddenY =
+    (renderedHeight - displayHeight) / 2;
+
+  const frameLeft =
+    frameRect.left - videoRect.left;
+
+  const frameTop =
+    frameRect.top - videoRect.top;
+
+  let sourceX =
+    (frameLeft + hiddenX) / scale;
+
+  let sourceY =
+    (frameTop + hiddenY) / scale;
+
+  let sourceWidth =
+    frameRect.width / scale;
+
+  let sourceHeight =
+    frameRect.height / scale;
+
+  sourceX =
+    Math.max(
+      0,
+      Math.min(
+        videoWidth - 1,
+        sourceX
+      )
+    );
+
+  sourceY =
+    Math.max(
+      0,
+      Math.min(
+        videoHeight - 1,
+        sourceY
+      )
+    );
+
+  sourceWidth =
+    Math.min(
+      sourceWidth,
+      videoWidth - sourceX
+    );
+
+  sourceHeight =
+    Math.min(
+      sourceHeight,
+      videoHeight - sourceY
     );
 
   /*
-    細い線を維持するため、
-    出力幅を最大1600pxにする。
+    最大1600pxで出力。
   */
   const outputWidth =
-    Math.min(1600, cropWidth);
+    Math.min(
+      1600,
+      Math.round(sourceWidth)
+    );
 
   const outputHeight =
-    Math.round(
-      outputWidth *
-      (cropHeight / cropWidth)
+    Math.max(
+      1,
+      Math.round(
+        outputWidth *
+        (sourceHeight / sourceWidth)
+      )
     );
 
   captureCanvas.width =
@@ -385,23 +640,13 @@ function createBarcodeCrop() {
   captureCanvas.height =
     outputHeight;
 
-  captureContext.fillStyle =
-    "#ffffff";
-
-  captureContext.fillRect(
-    0,
-    0,
-    outputWidth,
-    outputHeight
-  );
-
   captureContext.drawImage(
     cameraVideo,
 
     sourceX,
     sourceY,
-    cropWidth,
-    cropHeight,
+    sourceWidth,
+    sourceHeight,
 
     0,
     0,
@@ -409,96 +654,166 @@ function createBarcodeCrop() {
     outputHeight
   );
 
-  /*
-    コントラストを軽く強化。
-    完全二値化はまだ行わない。
-  */
-  improveContrast(
-    captureContext,
-    outputWidth,
-    outputHeight
-  );
-
-  return captureCanvas.toDataURL(
-    "image/jpeg",
-    0.96
-  );
+  return {
+    x: Math.round(sourceX),
+    y: Math.round(sourceY),
+    width: outputWidth,
+    height: outputHeight
+  };
 }
 
-function improveContrast(
-  context,
-  width,
-  height
-) {
-  const imageData =
-    context.getImageData(
-      0,
-      0,
-      width,
-      height
-    );
+function showPreview() {
+  previewCanvas.width =
+    captureCanvas.width;
 
-  const pixels =
-    imageData.data;
+  previewCanvas.height =
+    captureCanvas.height;
 
-  const contrast = 1.28;
-
-  for (
-    let index = 0;
-    index < pixels.length;
-    index += 4
-  ) {
-    const red =
-      pixels[index];
-
-    const green =
-      pixels[index + 1];
-
-    const blue =
-      pixels[index + 2];
-
-    /*
-      グレースケール化。
-    */
-    let gray =
-      red * 0.299 +
-      green * 0.587 +
-      blue * 0.114;
-
-    /*
-      中間値を中心に軽くコントラスト強化。
-    */
-    gray =
-      (gray - 128) *
-      contrast +
-      128;
-
-    gray =
-      Math.max(
-        0,
-        Math.min(255, gray)
-      );
-
-    pixels[index] =
-      gray;
-
-    pixels[index + 1] =
-      gray;
-
-    pixels[index + 2] =
-      gray;
-  }
-
-  context.putImageData(
-    imageData,
+  previewContext.drawImage(
+    captureCanvas,
     0,
     0
   );
 }
 
-function decodeCapturedImage(
-  imageDataUrl
-) {
+function createImageVariants() {
+  const variants = [];
+
+  /*
+    ① 生画像
+  */
+  variants.push({
+    name: "生画像",
+    dataUrl:
+      captureCanvas.toDataURL(
+        "image/png"
+      )
+  });
+
+  /*
+    処理用Canvasへ複製。
+  */
+  processCanvas.width =
+    captureCanvas.width;
+
+  processCanvas.height =
+    captureCanvas.height;
+
+  processContext.drawImage(
+    captureCanvas,
+    0,
+    0
+  );
+
+  const imageData =
+    processContext.getImageData(
+      0,
+      0,
+      processCanvas.width,
+      processCanvas.height
+    );
+
+  const pixels =
+    imageData.data;
+
+  /*
+    ② グレースケール＋軽いコントラスト
+  */
+  for (
+    let index = 0;
+    index < pixels.length;
+    index += 4
+  ) {
+    const gray =
+      pixels[index] * 0.299 +
+      pixels[index + 1] * 0.587 +
+      pixels[index + 2] * 0.114;
+
+    const contrasted =
+      Math.max(
+        0,
+        Math.min(
+          255,
+          (gray - 128) * 1.22 + 128
+        )
+      );
+
+    pixels[index] =
+      contrasted;
+
+    pixels[index + 1] =
+      contrasted;
+
+    pixels[index + 2] =
+      contrasted;
+  }
+
+  processContext.putImageData(
+    imageData,
+    0,
+    0
+  );
+
+  variants.push({
+    name: "グレースケール",
+    dataUrl:
+      processCanvas.toDataURL(
+        "image/png"
+      )
+  });
+
+  /*
+    ③ 二値化
+  */
+  const binaryData =
+    processContext.getImageData(
+      0,
+      0,
+      processCanvas.width,
+      processCanvas.height
+    );
+
+  const binaryPixels =
+    binaryData.data;
+
+  for (
+    let index = 0;
+    index < binaryPixels.length;
+    index += 4
+  ) {
+    const value =
+      binaryPixels[index] < 150
+        ? 0
+        : 255;
+
+    binaryPixels[index] =
+      value;
+
+    binaryPixels[index + 1] =
+      value;
+
+    binaryPixels[index + 2] =
+      value;
+  }
+
+  processContext.putImageData(
+    binaryData,
+    0,
+    0
+  );
+
+  variants.push({
+    name: "二値化",
+    dataUrl:
+      processCanvas.toDataURL(
+        "image/png"
+      )
+  });
+
+  return variants;
+}
+
+function decodeImage(imageDataUrl) {
   return new Promise(resolve => {
     Quagga.decodeSingle(
       {
@@ -536,7 +851,10 @@ function decodeCapturedImage(
   });
 }
 
-function finishReading(code) {
+function finishReading(
+  code,
+  detectedMethod
+) {
   if (!cameraRunning) {
     return;
   }
@@ -555,9 +873,11 @@ function finishReading(code) {
     "⑥ バーコード読み取り完了！"
   );
 
-  setDebug(
-    "確定：" + code
-  );
+  candidateText.textContent =
+    code +
+    "（確定・" +
+    detectedMethod +
+    "）";
 
   resultPanel.classList.remove(
     "hidden"
@@ -571,20 +891,30 @@ function finishReading(code) {
       escapeHtml(code) +
       "<br><br>" +
       "購入日：" +
-      escapeHtml(parsed.purchaseDate) +
+      escapeHtml(
+        parsed.purchaseDate
+      ) +
       "<br>" +
       "レジ番号：" +
-      escapeHtml(parsed.registerNo) +
+      escapeHtml(
+        parsed.registerNo
+      ) +
       "<br>" +
       "レシートNo：" +
-      escapeHtml(parsed.receiptNo);
+      escapeHtml(
+        parsed.receiptNo
+      );
   } else {
     resultText.innerHTML =
       escapeHtml(code) +
       "<br><br>" +
-      "バーコードは読めました。<br>" +
-      "形式の解析は次の工程で行います。";
+      "方式：" +
+      escapeHtml(detectedMethod);
   }
+
+  addLog(
+    "読取確定：" + code
+  );
 
   if (navigator.vibrate) {
     navigator.vibrate([
@@ -595,6 +925,8 @@ function finishReading(code) {
   }
 
   stopCameraStream();
+
+  setCameraState("完了");
 
   stopButton.classList.add(
     "hidden"
@@ -611,10 +943,6 @@ function finishReading(code) {
 }
 
 function parseLifeReceiptCode(code) {
-  /*
-    現在判明している想定：
-    A + 数字16桁 + A
-  */
   const match =
     /^([A-D])(\d{8})(\d{4})(\d{4})([A-D])$/
       .exec(code);
@@ -635,12 +963,12 @@ function parseLifeReceiptCode(code) {
 function resetReadingState() {
   clearInterval(captureTimer);
 
+  stopCameraStream();
+
   cameraRunning = false;
   decoding = false;
-  frameNumber = 0;
 
-  lastCandidate = "";
-  sameCandidateCount = 0;
+  resetStats();
 
   resultPanel.classList.add(
     "hidden"
@@ -653,7 +981,18 @@ function resetReadingState() {
     "success"
   );
 
-  setDebug("初期化完了");
+  resolutionText.textContent =
+    "―";
+
+  cropInfo.textContent =
+    "まだ画像を取得していません";
+
+  previewContext.clearRect(
+    0,
+    0,
+    previewCanvas.width,
+    previewCanvas.height
+  );
 }
 
 function stopCamera() {
@@ -682,8 +1021,9 @@ function stopCamera() {
   startButton.textContent =
     "もう一度読む";
 
-  setStatus("停止しました");
-  setDebug("カメラ停止");
+  setCameraState("停止");
+
+  setStatus("カメラを停止しました");
 }
 
 function stopCameraStream() {
