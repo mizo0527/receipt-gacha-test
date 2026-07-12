@@ -5,10 +5,10 @@
 html,
 body {
   width: 100%;
-  height: 100%;
+  min-height: 100%;
   margin: 0;
-  overflow: hidden;
-  background: #000;
+  background: #101214;
+  color: #fff;
   font-family:
     -apple-system,
     BlinkMacSystemFont,
@@ -18,22 +18,33 @@ body {
     sans-serif;
 }
 
+body {
+  padding-bottom:
+    calc(84px + env(safe-area-inset-bottom));
+}
+
 button,
 a {
   font: inherit;
 }
 
 #scannerPage {
-  position: fixed;
-  inset: 0;
-  width: 100vw;
-  height: 100dvh;
-  overflow: hidden;
-  background: #000;
-  color: #fff;
+  width: 100%;
+  min-height: 100dvh;
 }
 
-/* カメラ映像 */
+/* ─────────────────────────
+   上部：カメラ
+───────────────────────── */
+
+.cameraStage {
+  position: relative;
+  width: 100%;
+  height: 54dvh;
+  min-height: 360px;
+  overflow: hidden;
+  background: #000;
+}
 
 #cameraVideo {
   position: absolute;
@@ -44,43 +55,20 @@ a {
   background: #000;
 }
 
-#captureCanvas {
-  display: none;
-}
-
-/* 上下の暗幕 */
-
-.shade {
+.cameraShade {
   position: absolute;
-  left: 0;
+  inset: 0;
   z-index: 2;
-  width: 100%;
   pointer-events: none;
-}
-
-.shadeTop {
-  top: 0;
-  height: 25%;
   background:
     linear-gradient(
       to bottom,
-      rgba(0, 0, 0, 0.8),
-      rgba(0, 0, 0, 0)
+      rgba(0, 0, 0, 0.72),
+      rgba(0, 0, 0, 0.06) 30%,
+      rgba(0, 0, 0, 0.02) 70%,
+      rgba(0, 0, 0, 0.68)
     );
 }
-
-.shadeBottom {
-  bottom: 0;
-  height: 33%;
-  background:
-    linear-gradient(
-      to top,
-      rgba(0, 0, 0, 0.88),
-      rgba(0, 0, 0, 0)
-    );
-}
-
-/* タイトル */
 
 .topBar {
   position: absolute;
@@ -89,42 +77,36 @@ a {
   z-index: 5;
   width: 100%;
   padding:
-    max(22px, env(safe-area-inset-top))
-    18px
-    12px;
+    max(18px, env(safe-area-inset-top))
+    14px
+    10px;
   text-align: center;
   pointer-events: none;
 }
 
 .topBar h1 {
   margin: 0;
-  font-size: 25px;
+  font-size: 22px;
   text-shadow: 0 2px 8px #000;
 }
 
 .topBar p {
-  margin: 6px 0 0;
-  font-size: 14px;
+  margin: 5px 0 0;
+  font-size: 13px;
   text-shadow: 0 2px 8px #000;
 }
 
-/* 読取ガイド */
-
-.scannerGuide {
-  position: absolute;
-  inset: 0;
-  z-index: 4;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-}
+/* 読取枠 */
 
 .scanFrame {
-  position: relative;
-  width: min(92vw, 560px);
-  height: 165px;
+  position: absolute;
+  top: 51%;
+  left: 50%;
+  z-index: 5;
+  width: min(92vw, 620px);
+  height: 150px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
   transition:
     filter 0.2s,
     transform 0.2s;
@@ -138,46 +120,46 @@ a {
 
 .scanFrame.success {
   filter:
-    drop-shadow(0 0 8px #4cff7c)
-    drop-shadow(0 0 22px #4cff7c);
-  transform: scale(1.02);
+    drop-shadow(0 0 9px #4cff7c)
+    drop-shadow(0 0 23px #4cff7c);
+  transform: translate(-50%, -50%) scale(1.02);
 }
 
 .corner {
   position: absolute;
-  width: 46px;
-  height: 46px;
+  width: 44px;
+  height: 44px;
   border-color: #fff;
   border-style: solid;
-  filter: drop-shadow(0 2px 3px #000);
+  filter: drop-shadow(0 2px 4px #000);
 }
 
 .topLeft {
   top: 0;
   left: 0;
   border-width: 5px 0 0 5px;
-  border-radius: 16px 0 0 0;
+  border-radius: 15px 0 0 0;
 }
 
 .topRight {
   top: 0;
   right: 0;
   border-width: 5px 5px 0 0;
-  border-radius: 0 16px 0 0;
+  border-radius: 0 15px 0 0;
 }
 
 .bottomLeft {
   bottom: 0;
   left: 0;
   border-width: 0 0 5px 5px;
-  border-radius: 0 0 0 16px;
+  border-radius: 0 0 0 15px;
 }
 
 .bottomRight {
   right: 0;
   bottom: 0;
   border-width: 0 5px 5px 0;
-  border-radius: 0 0 16px 0;
+  border-radius: 0 0 15px 0;
 }
 
 .scanLine {
@@ -196,70 +178,158 @@ a {
 
 @keyframes scanMove {
   0% {
-    transform: translateY(-60px);
+    transform: translateY(-52px);
   }
 
   50% {
-    transform: translateY(60px);
+    transform: translateY(52px);
   }
 
   100% {
-    transform: translateY(-60px);
+    transform: translateY(-52px);
   }
 }
 
-/* ステータス */
-
-.statusText {
-  width: min(92vw, 560px);
-  min-height: 48px;
-  margin-top: 20px;
-  padding: 11px 14px;
-  border-radius: 13px;
-  background: rgba(0, 0, 0, 0.66);
-  font-size: 16px;
+.cameraStatus {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  z-index: 6;
+  width: min(92vw, 620px);
+  transform: translateX(-50%);
+  padding: 9px 12px;
+  border-radius: 11px;
+  background: rgba(0, 0, 0, 0.7);
+  font-size: 14px;
   font-weight: 800;
-  line-height: 1.5;
   text-align: center;
-  text-shadow: 0 1px 4px #000;
 }
 
-.debugText {
-  width: min(92vw, 560px);
-  min-height: 24px;
-  margin-top: 7px;
-  padding: 5px 10px;
-  border-radius: 8px;
-  background: rgba(0, 0, 0, 0.5);
-  color: #ddd;
+/* ─────────────────────────
+   下部：診断画面
+───────────────────────── */
+
+.diagnosticPanel {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 14px 12px 28px;
+  background: #171a1d;
+}
+
+.statusCard,
+.previewCard,
+.candidateCard,
+.logCard,
+.resultPanel {
+  margin-bottom: 12px;
+  padding: 14px;
+  border: 1px solid #343a40;
+  border-radius: 13px;
+  background: #22262a;
+}
+
+.sectionTitle {
+  margin-bottom: 8px;
+  color: #aeb7c0;
   font-size: 12px;
-  text-align: center;
+  font-weight: 800;
 }
 
-/* 結果 */
+.mainStatus {
+  min-height: 26px;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 900;
+  line-height: 1.5;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.statItem {
+  display: flex;
+  min-height: 56px;
+  flex-direction: column;
+  justify-content: center;
+  padding: 9px 11px;
+  border: 1px solid #343a40;
+  border-radius: 11px;
+  background: #22262a;
+}
+
+.statLabel {
+  margin-bottom: 4px;
+  color: #aeb7c0;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.statItem strong {
+  font-size: 16px;
+  overflow-wrap: anywhere;
+}
+
+#previewCanvas {
+  display: block;
+  width: 100%;
+  min-height: 90px;
+  border-radius: 8px;
+  background: #050505;
+  object-fit: contain;
+}
+
+.cropInfo {
+  margin-top: 7px;
+  color: #b8c0c7;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.candidateText {
+  min-height: 24px;
+  color: #ffe55c;
+  font-family:
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Consolas,
+    monospace;
+  font-size: 15px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.logCard summary {
+  cursor: pointer;
+  font-weight: 800;
+}
+
+#logText {
+  max-height: 240px;
+  margin: 12px 0 0;
+  overflow: auto;
+  color: #d7dde3;
+  white-space: pre-wrap;
+  font-size: 11px;
+  line-height: 1.5;
+}
 
 .resultPanel {
-  position: absolute;
-  left: 50%;
-  bottom: max(
-    115px,
-    calc(env(safe-area-inset-bottom) + 95px)
-  );
-  z-index: 8;
-  width: min(92vw, 560px);
-  transform: translateX(-50%);
-  padding: 18px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.97);
+  border: 3px solid #3fd06b;
+  background: #fff;
   color: #111;
   text-align: center;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.38);
 }
 
 .successTitle {
   margin-bottom: 10px;
   color: #15923d;
-  font-size: 19px;
+  font-size: 18px;
   font-weight: 900;
 }
 
@@ -270,41 +340,51 @@ a {
     Menlo,
     Consolas,
     monospace;
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 700;
   line-height: 1.7;
   overflow-wrap: anywhere;
 }
 
-/* 下部操作 */
+/* 非表示の処理用Canvas */
+
+#captureCanvas,
+#processCanvas {
+  display: none;
+}
+
+/* ─────────────────────────
+   下部操作
+───────────────────────── */
 
 .bottomBar {
-  position: absolute;
+  position: fixed;
   bottom: 0;
   left: 0;
-  z-index: 9;
+  z-index: 20;
   display: flex;
   width: 100%;
   justify-content: center;
-  gap: 9px;
+  gap: 8px;
   padding:
-    14px
-    12px
-    max(22px, env(safe-area-inset-bottom));
+    11px
+    10px
+    max(14px, env(safe-area-inset-bottom));
+  background: rgba(10, 12, 14, 0.94);
+  backdrop-filter: blur(10px);
 }
 
 .bottomBar button,
 .bottomBar a {
   min-width: 105px;
-  padding: 13px 15px;
+  padding: 12px 14px;
   border: 0;
   border-radius: 999px;
   color: #fff;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 800;
   text-align: center;
   text-decoration: none;
-  box-shadow: 0 5px 18px rgba(0, 0, 0, 0.38);
 }
 
 #startButton {
@@ -312,7 +392,7 @@ a {
 }
 
 .secondary {
-  background: rgba(40, 40, 40, 0.88);
+  background: #51565c;
 }
 
 .photoButton {
