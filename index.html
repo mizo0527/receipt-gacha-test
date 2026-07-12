@@ -8,7 +8,7 @@
     content="width=device-width, initial-scale=1, viewport-fit=cover"
   >
 
-  <title>レシートバーコード読取</title>
+  <title>レシートバーコード診断</title>
 
   <link rel="stylesheet" href="style.css">
 
@@ -18,24 +18,22 @@
 <body>
   <main id="scannerPage">
 
-    <video
-      id="cameraVideo"
-      autoplay
-      muted
-      playsinline
-    ></video>
+    <!-- 上：カメラ領域 -->
+    <section id="cameraStage" class="cameraStage">
 
-    <canvas id="captureCanvas"></canvas>
+      <video
+        id="cameraVideo"
+        autoplay
+        muted
+        playsinline
+      ></video>
 
-    <div class="shade shadeTop"></div>
-    <div class="shade shadeBottom"></div>
+      <div class="cameraShade"></div>
 
-    <header class="topBar">
-      <h1>レシートガチャ</h1>
-      <p>レシート下部のバーコードを読み取ります</p>
-    </header>
-
-    <section class="scannerGuide">
+      <header class="topBar">
+        <h1>レシートバーコード診断</h1>
+        <p>バーコード全体と左右の白い余白を枠内へ</p>
+      </header>
 
       <div id="scanFrame" class="scanFrame">
         <span class="corner topLeft"></span>
@@ -45,23 +43,95 @@
         <span class="scanLine"></span>
       </div>
 
-      <div id="statusText" class="statusText">
-        「カメラを起動」を押してください
-      </div>
-
-      <div id="debugText" class="debugText">
-        待機中
+      <div id="cameraStatus" class="cameraStatus">
+        カメラ停止中
       </div>
 
     </section>
 
-    <section id="resultPanel" class="resultPanel hidden">
-      <div class="successTitle">
-        バーコード読み取り完了！
+    <!-- 下：診断領域 -->
+    <section class="diagnosticPanel">
+
+      <div class="statusCard">
+        <div class="sectionTitle">現在の状態</div>
+
+        <div id="statusText" class="mainStatus">
+          「カメラを起動」を押してください
+        </div>
       </div>
 
-      <div id="resultText"></div>
+      <div class="statsGrid">
+
+        <div class="statItem">
+          <span class="statLabel">カメラ</span>
+          <strong id="cameraState">停止</strong>
+        </div>
+
+        <div class="statItem">
+          <span class="statLabel">解像度</span>
+          <strong id="resolutionText">―</strong>
+        </div>
+
+        <div class="statItem">
+          <span class="statLabel">取得回数</span>
+          <strong id="captureCount">0</strong>
+        </div>
+
+        <div class="statItem">
+          <span class="statLabel">解析回数</span>
+          <strong id="decodeCount">0</strong>
+        </div>
+
+        <div class="statItem">
+          <span class="statLabel">候補検出</span>
+          <strong id="candidateCount">0</strong>
+        </div>
+
+        <div class="statItem">
+          <span class="statLabel">解析失敗</span>
+          <strong id="failureCount">0</strong>
+        </div>
+
+      </div>
+
+      <div class="previewCard">
+        <div class="sectionTitle">
+          Quaggaへ渡している切り出し画像
+        </div>
+
+        <canvas id="previewCanvas"></canvas>
+
+        <div id="cropInfo" class="cropInfo">
+          まだ画像を取得していません
+        </div>
+      </div>
+
+      <div class="candidateCard">
+        <div class="sectionTitle">直近の候補</div>
+
+        <div id="candidateText" class="candidateText">
+          未検出
+        </div>
+      </div>
+
+      <details class="logCard">
+        <summary>診断ログを表示</summary>
+        <pre id="logText">待機中</pre>
+      </details>
+
+      <section id="resultPanel" class="resultPanel hidden">
+        <div class="successTitle">
+          バーコード読み取り完了！
+        </div>
+
+        <div id="resultText"></div>
+      </section>
+
     </section>
+
+    <!-- 解析用・非表示 -->
+    <canvas id="captureCanvas"></canvas>
+    <canvas id="processCanvas"></canvas>
 
     <footer class="bottomBar">
 
