@@ -408,3 +408,84 @@ button:disabled {
 .hidden {
   display: none !important;
 }
+/* ========================================
+   Ver0.63 本番UI調整
+   読取処理には触れず、見た目だけ変更
+======================================== */
+
+/* カメラ画面を少し大きくする */
+.cameraStage {
+  height: 56dvh;
+  min-height: 390px;
+}
+
+/* タイトルを少し見やすくする */
+.topBar h1 {
+  font-size: 23px;
+}
+
+.topBar p {
+  font-size: 14px;
+}
+
+/* 読取枠は現在の比率を維持 */
+.scanFrame {
+  width: min(94vw, 620px);
+  height: 110px;
+}
+
+/* カメラ下の案内を大きくする */
+.cameraStatus {
+  bottom: 14px;
+  padding: 12px 14px;
+  font-size: 15px;
+}
+
+/* 下部固定バー */
+.bottomBar {
+  gap: 10px;
+  padding:
+    12px
+    12px
+    max(16px, env(safe-area-inset-bottom));
+}
+
+/* ボタン全体を大きくする */
+.bottomBar button,
+.bottomBar a {
+  min-height: 52px;
+  min-width: 110px;
+  padding: 14px 16px;
+  font-size: 15px;
+}
+
+/* 読取開始ボタンを一番目立たせる */
+#startButton {
+  flex: 1;
+  max-width: 340px;
+  min-height: 58px;
+  font-size: 17px;
+}
+
+/* 停止ボタンは少し控えめ */
+#stopButton {
+  min-width: 100px;
+}
+
+/* 静止画ボタン */
+.photoButton {
+  min-width: 120px;
+}
+
+/* 成功結果を大きく表示 */
+.resultPanel {
+  padding: 20px 14px;
+}
+
+.successTitle {
+  font-size: 21px;
+}
+
+#resultText {
+  font-size: 18px;
+}
